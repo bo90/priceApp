@@ -1,0 +1,140 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using System.Data;
+using System.Data.OleDb;
+using System.Data.Linq;
+
+namespace PriceApp
+{
+    /// <summary>
+    /// Логика взаимодействия для MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+        public MainWindow()
+        {
+            InitializeComponent();
+        }
+        /*метод загрузки таблицы при выборе склада*/
+        public void loadData()
+        {
+            try
+            {
+                // инициализация класса
+                ConnectLayer con = new ConnectLayer();
+                // открытие соединения с БД
+                con.ConnectionOpen();
+                // передача параметра - №склада в метод по поиску по номеру склада всех его товаров
+                int numberSklad = Convert.ToInt32(selectSklad.Text);
+                // вывод в таблицу товаров конкретного склада
+                gridsklad.ItemsSource = con.GetAllGoodAsTable(numberSklad).DefaultView;
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
+
+        /*метод загрузки списка складов*/
+        public void LoadingSklads()
+        {
+            try
+            {
+                ConnectLayer con = new ConnectLayer();
+                // открытие соединения
+                con.ConnectionOpen();
+                // пердача в selectSklad номеров всех складов 
+                selectSklad.ItemsSource = con.GetAllSkladAsTable().DefaultView;
+                // вывод в selectSklad номеров в нормальном виде
+                selectSklad.DisplayMemberPath = "ID_Sklad";
+                // закрытие соединения
+                con.CloseConnection();
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            // загрузка номеров складов
+            LoadingSklads();
+        }
+
+        private void SelectSklad_DropDownClosed(object sender, EventArgs e)
+        {
+            try
+            {
+                // загрузка названия склада конкретного номера
+                // инициализация класса
+                ConnectLayer con = new ConnectLayer();
+                // открытие соединения с БД
+                con.ConnectionOpen();
+                // передача параметра для поиска названия склада по его номеру
+                int number = Convert.ToInt32(selectSklad.Text);
+                // вывод названия склада по его номеру
+                nameSklad.Text = con.NameSklad(number);
+            }
+            catch(Exception ex)
+            {
+                // MessageBox.Show(ex.Message);
+                return;
+            }
+        }
+
+        private void OpenskladBtn_Click(object sender, RoutedEventArgs e)
+        {
+            //Загрузка перечня товара конкретного склада
+            loadData();
+        }
+
+        private void CreateSklad_Click(object sender, RoutedEventArgs e)
+        {
+            // открытие формы по созданию нового склада
+            CreateWarehouse create = new CreateWarehouse();
+            create.Show();
+        }
+
+        private void AddGoodsBtn_Click(object sender, RoutedEventArgs e)
+        {
+            // открытие формы по добавлению нового товара
+            NewGoods newGoods = new NewGoods();
+            newGoods.Show();
+        }
+
+        private void CloseBtn_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private void ChangeGoodsBtn_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+        }
+
+        //private void OpenskladBtn_Click_1(object sender, RoutedEventArgs e)
+        //{
+
+        //}
+    }
+}

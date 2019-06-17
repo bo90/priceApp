@@ -1,0 +1,21 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace PriceApp
+{
+    /*данный интерфейс отвечает за методы которые должен будет реализовать класс ConnectLayer*/
+    public interface IActionData
+    {
+        //метод добавления склада
+        void AddSklad(int id, string name);
+        // метод добавления товара
+        void AddGoods(int idGoods, int idSklad, string name, string view, string descript);
+        // метод изменения това
+        void ChangeGoods();
+        // метод добаления цены
+        void NewPrice(int idGood, DateTime currentDate, int price);
+    }
+}

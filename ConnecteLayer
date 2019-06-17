@@ -1,0 +1,319 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Data;
+using System.Data.OleDb;
+using System.Threading;
+
+namespace PriceApp
+{
+    /*класс открыт и используется внутри сборки*/
+    internal class ConnectLayer
+    {
+        /*Класс ConnectLayer будет отвечать за соединение с БД и группу манипуляций данных*/
+
+        /*инициализация открытия подключения к истонику данных*/
+        private OleDbConnection myConn = null;
+        /*метод открытия подключения к данным*/
+        public void ConnectionOpen()
+        {
+            string conn = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=PriceDB.mdb;";
+            myConn = new OleDbConnection(conn);
+            myConn.Open();
+        }
+        /*Метод закрытия подключения*/
+        public void CloseConnection()
+        {
+            myConn.Close();
+        }
+        
+        /*вывод всех товаров в List */
+        public IList<NewGoods> GetAllGoods()
+        {
+            List<NewGoods> inv = new List<NewGoods>();
+            string query = "Select * from Goods";
+            using (OleDbCommand command = new OleDbCommand(query, myConn))
+            {
+                OleDbDataReader dr = command.ExecuteReader();
+                while(dr.Read())
+                {
+                    inv.Add(new NewGoods
+                    {
+                        IdGoods = (int)dr["ID_Goods"],
+                        IdSklad = (int)dr["ID_sklad"],
+                        NameGoods = (string)dr["NameGoods"],
+                        ViewGoods = (string)dr["ViewGoods"],
+                        Descript = (string)dr["Descript"],
+                        CountGoods = (int)dr["CountGoods"]
+                    });
+                }
+                dr.Close();
+            }
+            return inv;
+        }
+
+        // вывод товаров конкретного склада
+        public DataTable GetAllGoodAsTable(int idSklad)
+        {
+            // инициализация DateTable что бы можно было в него загрузить результат запроса
+            DataTable dt = new DataTable();
+            // запрос на получения товаров конкретного склада
+            string query = string.Format("Select ID_Goods as [Номер товара]," +
+                "ID_sklad as [Номер склада], NameGoods as [Наименование товара]," +
+                "ViewGoods as [Вид товара], Descript as [Описание товара]," +
+                "CountGoods as [Количество] from Goods where ID_sklad = {0}", idSklad);
+            // инициализация выолнения команды запроса
+            using (OleDbCommand cmd = new OleDbCommand(query, myConn))
+            {
+                // инициализация интерфейса чтения данных
+                OleDbDataReader dr = cmd.ExecuteReader();
+                // загрузка данных в таблицу
+                dt.Load(dr);
+                // закрытие интерфейса чтения данных
+                dr.Close();
+            }
+            return dt;
+        }
+
+        //вывод всех складов
+        public DataTable GetAllSkladAsTable()
+        {
+            DataTable dt = new DataTable();
+            string query = "SELECT * FROM Sklad";
+            using (OleDbCommand cmd = new OleDbCommand(query, myConn))
+            {
+                OleDbDataReader dr = cmd.ExecuteReader();
+                dt.Load(dr);
+                dr.Close();
+            }
+            return dt;
+        }
+        // вывод названия склада по его номеру
+        public string NameSklad(int idsklad)
+        {
+            // запрос на получение № склада
+            string query = string.Format("SELECT * FROM Sklad WHERE ID_Sklad = {0}", idsklad);
+            // переменная куда будет выведен результат
+            string res = null; 
+            //инициализация команды выполнения запроса
+            using (OleDbCommand cmd = new OleDbCommand(query, myConn))
+            {
+                try
+                {
+                    // открытие интерфейса чтения данных
+                    OleDbDataReader dr = cmd.ExecuteReader();
+                    // инициализация чтения
+                    dr.Read();
+                    // передача результата чтения в переменную, с указанием требуемого поля
+                    res = dr["NameSklad"].ToString();                     
+                    // закрытие чтения
+                    dr.Close();
+                }
+                catch(Exception ex)
+                {
+                    // вывод в случае ошибки
+                    System.Windows.Forms.MessageBox.Show(ex.Message);
+                }
+            }
+            // возвращение результата запроса
+            return res;
+        }
+
+        //создание нового склада
+        public void InsertNewwarehoue(int idSklad, string nameSklad)
+        {
+            //запрос на вставку данных c использованием параметров
+            string query = "insert into Sklad (ID_Sklad, NameSklad) values" +
+                "(@ID_Sklad, @NameSklad)";
+            using (OleDbCommand cmd = new OleDbCommand(query, myConn))
+            {
+                // описание условия для параметра 
+                OleDbParameter param = new OleDbParameter();
+                param.ParameterName = "@ID_Sklad";
+                param.Value = idSklad;
+                param.DbType = DbType.Int32;
+                cmd.Parameters.Add(param);
+                //
+                param = new OleDbParameter();
+                param.ParameterName = "@NameSklad";
+                param.Value = nameSklad;
+                param.DbType = DbType.String;
+                cmd.Parameters.Add(param);
+
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        // вставка нового товара
+        public void InsertNewGoods(int idGoods, int idSklad, string nameGoods, string viewGoods, string descript,
+            int countGoods)
+        {
+            try
+            {
+                // запрос на вставку данных для новго товара
+                string query = "insert into Goods (ID_Goods, ID_sklad, NameGoods, ViewGoods,Descript,CountGoods)" +
+                    "values (@ID_Goods, @ID_sklad, @NameGoods, @ViewGoods, @Descript, @CountGoods)";
+                using (OleDbCommand cmd = new OleDbCommand(query, myConn))
+                {
+                    // описание условия для параметра 
+                    OleDbParameter param = new OleDbParameter();
+                    param.ParameterName = "@ID_Goods";
+                    param.Value = idGoods;
+                    param.DbType = DbType.Int32;
+                    cmd.Parameters.Add(param);
+                    //ID_sklad
+                    param = new OleDbParameter();
+                    param.ParameterName = "@ID_sklad";
+                    param.Value = idSklad;
+                    param.DbType = DbType.Int32;
+                    cmd.Parameters.Add(param);
+                    //NameGoods
+                    param = new OleDbParameter();
+                    param.ParameterName = "@NameGoods";
+                    param.Value = nameGoods;
+                    param.DbType = DbType.String;
+                    cmd.Parameters.Add(param);
+                    //ViewGoods
+                    param = new OleDbParameter();
+                    param.ParameterName = "@ViewGoods";
+                    param.Value = viewGoods;
+                    param.DbType = DbType.String;
+                    cmd.Parameters.Add(param);
+                    //
+                    param = new OleDbParameter();
+                    param.ParameterName = "@Descript";
+                    param.Value = descript;
+                    param.DbType = DbType.String;
+                    cmd.Parameters.Add(param);
+                    //
+                    param = new OleDbParameter();
+                    param.ParameterName = "@CountGoods";
+                    param.Value = countGoods;
+                    param.DbType = DbType.Int32;
+                    cmd.Parameters.Add(param);
+
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch(Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show(ex.Message);
+            }
+        }
+
+        public DataTable LoadUniqueID()
+        {
+            
+                DataTable dt = new DataTable();
+                string query = "SELECT ID FROM GOODS";
+                using (OleDbCommand cmd = new OleDbCommand(query, myConn))
+                {
+                    OleDbDataReader dr = cmd.ExecuteReader();
+                    // загрузка данных в таблицу
+                    dt.Load(dr);
+                    // закрытие интерфейса чтения данных
+                    dr.Close();
+                }
+                return dt;            
+        }
+
+        public void NewPrice(int _idGoods, int _price)
+        {
+            try
+            {
+                string query = "insert into HistoryGoods (ID_Goods, DatePrice,Price)" +
+                    "VALUES (@ID_Goods,@DatePrice, @Price)";
+                using (OleDbCommand cmd = new OleDbCommand(query, myConn))
+                {
+                    // описание условия для параметра 
+                    OleDbParameter param = new OleDbParameter();
+                    param.ParameterName = "@ID_Goods";
+                    param.Value = _idGoods;
+                    param.DbType = DbType.Int32;
+                    cmd.Parameters.Add(param);
+                    //DatePrice
+                    param = new OleDbParameter();
+                    param.ParameterName = "@DatePrice";
+                    param.Value = DateTime.Now.Date;
+                    param.DbType = DbType.DateTime;
+                    cmd.Parameters.Add(param);
+                    //Price
+                    param = new OleDbParameter();
+                    param.ParameterName = "@Price";
+                    param.Value = _price;
+                    param.DbType = DbType.Int32;
+                    cmd.Parameters.Add(param);
+
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch(Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show(ex.Message);
+            }
+        }
+
+        public DataTable TablePrice(int _idGoods)
+        {
+            string query = "SELECT * FROM HistoryGoods WHERE ID_Goods =" + _idGoods;
+            DataTable dt = new DataTable();
+            using (OleDbCommand cmd = new OleDbCommand(query, myConn))
+            {
+                OleDbDataReader dr = cmd.ExecuteReader();
+                // загрузка данных в таблицу
+                dt.Load(dr);
+                // закрытие интерфейса чтения данных
+                dr.Close();
+            }
+            return dt;
+        }
+
+        public void UpdateRecord(int _idGoods, int _idSklad, string name, string view, string descript, 
+            int count, int _id)
+        {
+            try
+            {
+                string query = string.Format("update Goods SET ID_Goods = {0} where ID={1}", _idGoods,  _id); //_idSklad, name, view, descript, count,
+                using (OleDbCommand cmd = new OleDbCommand(query, myConn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+                //,ID_sklad = {1}, " +
+                //"NameGoods = {2}, ViewGoods= {3}, Descript={4}, CountGoods={5} " +
+                //"
+                query = string.Format("update Goods SET ID_sklad = {0} where ID = {1}", _idSklad, _id);
+                using (OleDbCommand cmd = new OleDbCommand(query, myConn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+
+                query = string.Format("update Goods SET NameGoods = '{0}' where ID = {1}", name, _id);
+                using (OleDbCommand cmd = new OleDbCommand(query, myConn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+                query = string.Format("update Goods SET ViewGoods = '{0}' where ID = {1}", view, _id);
+                using (OleDbCommand cmd = new OleDbCommand(query, myConn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+                query = string.Format("update Goods SET Descript = '{0}' where ID = {1}", descript, _id);
+                using (OleDbCommand cmd = new OleDbCommand(query, myConn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+                query = string.Format("update Goods SET CountGoods = {0} where ID = {1}", count, _id);
+                using (OleDbCommand cmd = new OleDbCommand(query, myConn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch(Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show(ex.Message);
+            }
+        }
+    }
+}
